@@ -1,0 +1,15 @@
+[package]
+name = "tdn_permission"
+version = "0.0.1"
+authors = ["Contact <contact@cypherlink.io>"]
+edition = "2018"
+readme = "README.md"
+description = "Multiple permissioned / permissionless libraries for TDN."
+repository = "https://github.com/cypherlink/TDN-Permission"
+keywords = ["tdn", "permissioned", "permissionless", "distributed", "blockchain"]
+license = "MIT/Apache-2.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tdn = { path = "../TDN" } # Dev
