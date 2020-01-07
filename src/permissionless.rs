@@ -1,18 +1,56 @@
-use tdn::{Group, GroupId, PeerAddr};
+use std::collections::HashMap;
+use std::net::SocketAddr;
+use tdn::async_std::sync::Sender;
+use tdn::{Group, GroupId, Message, PeerAddr};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct PermissionlessGroup {
     id: GroupId,
-    peers: Vec<PeerAddr>,
+    peers: HashMap<PeerAddr, SocketAddr>,
 }
 
-impl Group for PermissionlessGroup {
-    fn id(&self) -> &GroupId {
+impl Group for PermissionlessGroup {}
+
+impl PermissionlessGroup {
+    pub fn id(&self) -> &GroupId {
         &self.id
     }
 
     /// directly add a peer to group.
-    fn add(&mut self, peer_id: &PeerAddr) {
-        self.peers.push(peer_id.clone());
+    pub fn add(&mut self, peer_id: PeerAddr, addr: SocketAddr) {
+        self.peers
+            .entry(peer_id)
+            .and_modify(|a| *a = addr)
+            .or_insert(addr);
+    }
+
+    /// join: when peer join will call
+    pub async fn join(
+        &mut self,
+        peer_addr: PeerAddr,
+        addr: SocketAddr,
+        _join_data: Vec<u8>,
+        return_sender: Sender<Message>,
+    ) {
+        let is_ok = !self.peers.contains_key(&peer_addr);
+
+        return_sender
+            .send(Message::PeerJoinResult(peer_addr, is_ok, vec![]))
+            .await;
+
+        if is_ok {
+            self.peers.insert(peer_addr, addr);
+        }
+    }
+
+    /// leave: when peer leave will call
+    pub fn leave(&mut self, peer_addr: &PeerAddr) {
+        self.peers.remove(&peer_addr);
+    }
+
+    /// verify: check peer is verified by group permission,
+    /// it has default implement if you want to handle it in consensus
+    pub fn verify(&self, _peer_id: &PeerAddr) -> bool {
+        true
     }
 }
