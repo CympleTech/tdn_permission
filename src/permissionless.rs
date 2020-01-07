@@ -43,14 +43,12 @@ impl PermissionlessGroup {
         }
     }
 
+    pub fn join_result(&mut self, _peer_addr: PeerAddr, _is_ok: bool, _join_result: Vec<u8>) {
+        // TODO
+    }
+
     /// leave: when peer leave will call
     pub fn leave(&mut self, peer_addr: &PeerAddr) {
         self.peers.remove(&peer_addr);
-    }
-
-    /// verify: check peer is verified by group permission,
-    /// it has default implement if you want to handle it in consensus
-    pub fn verify(&self, _peer_id: &PeerAddr) -> bool {
-        true
     }
 }
