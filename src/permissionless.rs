@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use tdn::async_std::sync::Sender;
-use tdn::{Group, GroupId, Message, PeerAddr};
+use tdn::prelude::*;
+use tdn::traits::group::Group;
+
+use crate::group::BasicGroup;
 
 #[derive(Default, Debug)]
 pub struct PermissionlessGroup {
@@ -9,7 +12,12 @@ pub struct PermissionlessGroup {
     peers: HashMap<PeerAddr, SocketAddr>,
 }
 
-impl Group for PermissionlessGroup {}
+impl Group for PermissionlessGroup {
+    type JoinType = ();
+    type JoinResultType = ();
+}
+
+impl BasicGroup for PermissionlessGroup {}
 
 impl PermissionlessGroup {
     pub fn id(&self) -> &GroupId {
