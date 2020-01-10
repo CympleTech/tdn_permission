@@ -947,6 +947,9 @@ dependencies = [
 name = "tdn_permission"
 version = "0.0.1"
 dependencies = [
+ "async-trait 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bincode 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "tdn 0.0.1",
 ]
 

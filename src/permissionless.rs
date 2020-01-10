@@ -4,8 +4,6 @@ use tdn::async_std::sync::Sender;
 use tdn::prelude::*;
 use tdn::traits::group::Group;
 
-use crate::group::BasicGroup;
-
 #[derive(Default, Debug)]
 pub struct PermissionlessGroup {
     id: GroupId,
@@ -17,9 +15,9 @@ impl Group for PermissionlessGroup {
     type JoinResultType = ();
 }
 
-impl BasicGroup for PermissionlessGroup {}
-
 impl PermissionlessGroup {
+    pub fn new() {}
+
     pub fn id(&self) -> &GroupId {
         &self.id
     }
@@ -32,12 +30,16 @@ impl PermissionlessGroup {
             .or_insert(addr);
     }
 
+    pub fn join_bytes(&self) -> Vec<u8> {
+        vec![]
+    }
+
     /// join: when peer join will call
     pub async fn join(
         &mut self,
         peer_addr: PeerAddr,
         addr: SocketAddr,
-        _join_data: Vec<u8>,
+        _join_bytes: Vec<u8>,
         return_sender: Sender<Message>,
     ) {
         let is_ok = !self.peers.contains_key(&peer_addr);
@@ -51,8 +53,10 @@ impl PermissionlessGroup {
         }
     }
 
-    pub fn join_result(&mut self, _peer_addr: PeerAddr, _is_ok: bool, _join_result: Vec<u8>) {
-        // TODO
+    pub fn join_result(&mut self, peer_addr: PeerAddr, is_ok: bool, _join_result: Vec<u8>) {
+        if !is_ok {
+            self.peers.remove(&peer_addr);
+        }
     }
 
     /// leave: when peer leave will call

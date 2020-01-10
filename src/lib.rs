@@ -1,8 +1,8 @@
 #![feature(associated_type_defaults)]
 
 mod ca_permissioned;
-mod group;
 mod permissionless;
 mod vote_permissioned;
 
-pub use self::permissionless::PermissionlessGroup;
+pub use ca_permissioned::CAPermissionedGroup;
+pub use permissionless::PermissionlessGroup;
