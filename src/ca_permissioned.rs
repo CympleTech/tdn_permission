@@ -8,7 +8,6 @@ use tdn::traits::peer::Peer;
 #[derive(Default, Debug)]
 pub struct CAPermissionedGroup<P: Peer> {
     id: GroupId,
-    my_sk: P::SecretKey,
     my_pk: P::PublicKey,
     my_prove: P::Signature,
     ca: P::PublicKey,
@@ -21,16 +20,9 @@ impl<P: Peer> Group for CAPermissionedGroup<P> {
 }
 
 impl<P: Peer> CAPermissionedGroup<P> {
-    pub fn new(
-        id: GroupId,
-        my_sk: P::SecretKey,
-        my_pk: P::PublicKey,
-        my_prove: P::Signature,
-        ca: P::PublicKey,
-    ) -> Self {
+    pub fn new(id: GroupId, my_pk: P::PublicKey, my_prove: P::Signature, ca: P::PublicKey) -> Self {
         Self {
             id,
-            my_sk,
             my_pk,
             my_prove,
             ca,
@@ -58,11 +50,11 @@ impl<P: Peer> CAPermissionedGroup<P> {
     }
 
     pub fn sign_prove(
-        &self,
+        sk: &P::SecretKey,
         pk: &P::PublicKey,
     ) -> Result<P::Signature, Box<dyn std::error::Error>> {
         let pk_bytes = bincode::serialize(pk).unwrap_or(vec![]);
-        P::sign(&self.my_sk, &pk_bytes)
+        P::sign(sk, &pk_bytes)
     }
 
     /// join: when peer join will call
@@ -76,14 +68,22 @@ impl<P: Peer> CAPermissionedGroup<P> {
         let is_ok = self.peers.contains_key(&peer_addr);
         if is_ok {
             return_sender
-                .send(Message::PeerJoinResult(peer_addr, true, vec![]))
+                .send(Message::Group(GroupMessage::PeerJoinResult(
+                    peer_addr,
+                    true,
+                    vec![],
+                )))
                 .await;
         }
 
         let join_data = bincode::deserialize::<(P::PublicKey, P::Signature)>(&join_bytes);
         if join_data.is_err() {
             return return_sender
-                .send(Message::PeerJoinResult(peer_addr, false, vec![]))
+                .send(Message::Group(GroupMessage::PeerJoinResult(
+                    peer_addr,
+                    false,
+                    vec![],
+                )))
                 .await;
         }
         let (pk, sign) = join_data.unwrap();
@@ -92,13 +92,19 @@ impl<P: Peer> CAPermissionedGroup<P> {
         if P::verify(&self.ca, &pk_bytes, &sign) {
             let sign_bytes = bincode::serialize(&self.my_prove).unwrap_or(vec![]);
             return_sender
-                .send(Message::PeerJoinResult(peer_addr, true, sign_bytes))
+                .send(Message::Group(GroupMessage::PeerJoinResult(
+                    peer_addr, true, sign_bytes,
+                )))
                 .await;
 
             self.peers.insert(peer_addr, (pk, sign, addr));
         } else {
             return_sender
-                .send(Message::PeerJoinResult(peer_addr, false, vec![]))
+                .send(Message::Group(GroupMessage::PeerJoinResult(
+                    peer_addr,
+                    false,
+                    vec![],
+                )))
                 .await;
         }
     }

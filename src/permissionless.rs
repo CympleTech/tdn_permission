@@ -45,7 +45,11 @@ impl PermissionlessGroup {
         let is_ok = !self.peers.contains_key(&peer_addr);
 
         return_sender
-            .send(Message::PeerJoinResult(peer_addr, is_ok, vec![]))
+            .send(Message::Group(GroupMessage::PeerJoinResult(
+                peer_addr,
+                is_ok,
+                vec![],
+            )))
             .await;
 
         if is_ok {

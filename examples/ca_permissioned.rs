@@ -26,13 +26,8 @@ impl Peer for MockPeer {
 fn main() {
     task::block_on(async {
         let (out_send, out_recv) = new_channel();
-        let mut group = CAPermissionedGroup::<MockPeer>::new(
-            GroupId::default(),
-            vec![1],
-            vec![2],
-            vec![3],
-            vec![4],
-        );
+        let mut group =
+            CAPermissionedGroup::<MockPeer>::new(GroupId::default(), vec![1], vec![2], vec![3]);
 
         let mut config = Config::load();
         config.p2p_join_data = group.join_bytes();
