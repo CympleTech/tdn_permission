@@ -34,6 +34,10 @@ impl<P: Peer> CAPermissionedGroup<P> {
         &self.id
     }
 
+    pub fn peers(&self) -> Vec<&PeerAddr> {
+        self.peers.keys().collect()
+    }
+
     /// directly add a peer to group.
     pub fn add(
         &mut self,
@@ -71,7 +75,7 @@ impl<P: Peer> CAPermissionedGroup<P> {
                 .send(Message::Group(GroupMessage::PeerJoinResult(
                     peer_addr,
                     true,
-                    vec![],
+                    self.join_bytes(),
                 )))
                 .await;
         }
@@ -82,7 +86,7 @@ impl<P: Peer> CAPermissionedGroup<P> {
                 .send(Message::Group(GroupMessage::PeerJoinResult(
                     peer_addr,
                     false,
-                    vec![],
+                    vec![2],
                 )))
                 .await;
         }
@@ -90,10 +94,11 @@ impl<P: Peer> CAPermissionedGroup<P> {
         let pk_bytes = bincode::serialize(&pk).unwrap_or(vec![]);
 
         if P::verify(&self.ca, &pk_bytes, &sign) {
-            let sign_bytes = bincode::serialize(&self.my_prove).unwrap_or(vec![]);
             return_sender
                 .send(Message::Group(GroupMessage::PeerJoinResult(
-                    peer_addr, true, sign_bytes,
+                    peer_addr,
+                    true,
+                    self.join_bytes(),
                 )))
                 .await;
 
@@ -103,7 +108,7 @@ impl<P: Peer> CAPermissionedGroup<P> {
                 .send(Message::Group(GroupMessage::PeerJoinResult(
                     peer_addr,
                     false,
-                    vec![],
+                    vec![3],
                 )))
                 .await;
         }
