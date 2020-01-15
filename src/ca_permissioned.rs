@@ -12,6 +12,8 @@ pub struct CAPermissionedGroup<P: Peer> {
     my_prove: P::Signature,
     ca: P::PublicKey,
     peers: HashMap<PeerAddr, (P::PublicKey, P::Signature, SocketAddr)>,
+    name: String,
+    peers_name: HashMap<String, PeerAddr>, // Peer Symbol Name
 }
 
 impl<P: Peer> Group for CAPermissionedGroup<P> {
@@ -23,10 +25,30 @@ impl<P: Peer> CAPermissionedGroup<P> {
     pub fn new(id: GroupId, my_pk: P::PublicKey, my_prove: P::Signature, ca: P::PublicKey) -> Self {
         Self {
             id,
+            name: P::hex_public_key(&my_pk),
+            my_pk: my_pk,
+            my_prove: my_prove,
+            ca: ca,
+            peers: HashMap::new(),
+            peers_name: HashMap::new(),
+        }
+    }
+
+    pub fn new_with_name(
+        id: GroupId,
+        my_pk: P::PublicKey,
+        my_prove: P::Signature,
+        ca: P::PublicKey,
+        my_name: impl ToString,
+    ) -> Self {
+        Self {
+            id,
             my_pk,
             my_prove,
             ca,
             peers: HashMap::new(),
+            name: my_name.to_string(),
+            peers_name: HashMap::new(),
         }
     }
 
@@ -36,6 +58,10 @@ impl<P: Peer> CAPermissionedGroup<P> {
 
     pub fn peers(&self) -> Vec<&PeerAddr> {
         self.peers.keys().collect()
+    }
+
+    pub fn get_peer_addr(&self, name: &String) -> Option<&PeerAddr> {
+        self.peers_name.get(name)
     }
 
     /// directly add a peer to group.
@@ -50,7 +76,7 @@ impl<P: Peer> CAPermissionedGroup<P> {
     }
 
     pub fn join_bytes(&self) -> Vec<u8> {
-        bincode::serialize(&(&self.my_pk, &self.my_prove)).unwrap_or(vec![])
+        bincode::serialize(&(&self.name, &self.my_pk, &self.my_prove)).unwrap_or(vec![])
     }
 
     pub fn sign_prove(
@@ -80,7 +106,7 @@ impl<P: Peer> CAPermissionedGroup<P> {
                 .await;
         }
 
-        let join_data = bincode::deserialize::<(P::PublicKey, P::Signature)>(&join_bytes);
+        let join_data = bincode::deserialize::<(String, P::PublicKey, P::Signature)>(&join_bytes);
         if join_data.is_err() {
             return return_sender
                 .send(Message::Group(GroupMessage::PeerJoinResult(
@@ -90,7 +116,7 @@ impl<P: Peer> CAPermissionedGroup<P> {
                 )))
                 .await;
         }
-        let (pk, sign) = join_data.unwrap();
+        let (name, pk, sign) = join_data.unwrap();
         let pk_bytes = bincode::serialize(&pk).unwrap_or(vec![]);
 
         if P::verify(&self.ca, &pk_bytes, &sign) {
@@ -102,7 +128,14 @@ impl<P: Peer> CAPermissionedGroup<P> {
                 )))
                 .await;
 
+            let name = if self.peers_name.contains_key(&name) {
+                P::hex_public_key(&pk)
+            } else {
+                name
+            };
+
             self.peers.insert(peer_addr, (pk, sign, addr));
+            self.peers_name.insert(name, peer_addr);
         } else {
             return_sender
                 .send(Message::Group(GroupMessage::PeerJoinResult(
@@ -123,5 +156,16 @@ impl<P: Peer> CAPermissionedGroup<P> {
     /// leave: when peer leave will call
     pub fn leave(&mut self, peer_addr: &PeerAddr) {
         self.peers.remove(&peer_addr);
+        let mut delete_name = "".to_owned();
+
+        for (name, addr) in self.peers_name.iter() {
+            if addr == peer_addr {
+                delete_name = name.clone();
+            }
+        }
+
+        if delete_name != "".to_owned() {
+            self.peers_name.remove(&delete_name);
+        }
     }
 }
