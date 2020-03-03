@@ -48,6 +48,7 @@ impl PermissionlessGroup {
             .send(Message::Group(GroupMessage::PeerJoinResult(
                 peer_addr,
                 is_ok,
+                false,
                 vec![],
             )))
             .await;

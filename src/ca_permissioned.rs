@@ -101,6 +101,7 @@ impl<P: Peer> CAPermissionedGroup<P> {
                 .send(Message::Group(GroupMessage::PeerJoinResult(
                     peer_addr,
                     true,
+                    false,
                     self.join_bytes(),
                 )))
                 .await;
@@ -112,6 +113,7 @@ impl<P: Peer> CAPermissionedGroup<P> {
                 .send(Message::Group(GroupMessage::PeerJoinResult(
                     peer_addr,
                     false,
+                    true,
                     vec![2],
                 )))
                 .await;
@@ -124,6 +126,7 @@ impl<P: Peer> CAPermissionedGroup<P> {
                 .send(Message::Group(GroupMessage::PeerJoinResult(
                     peer_addr,
                     true,
+                    false,
                     self.join_bytes(),
                 )))
                 .await;
@@ -141,6 +144,7 @@ impl<P: Peer> CAPermissionedGroup<P> {
                 .send(Message::Group(GroupMessage::PeerJoinResult(
                     peer_addr,
                     false,
+                    true,
                     vec![3],
                 )))
                 .await;
