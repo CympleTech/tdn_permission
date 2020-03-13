@@ -93,12 +93,12 @@ impl<P: Peer> CAPermissionedGroup<P> {
         peer_addr: PeerAddr,
         addr: SocketAddr,
         join_bytes: Vec<u8>,
-        return_sender: Sender<Message>,
+        return_sender: Sender<SendMessage>,
     ) {
         let is_ok = self.peers.contains_key(&peer_addr);
         if is_ok {
             return_sender
-                .send(Message::Group(GroupMessage::PeerJoinResult(
+                .send(SendMessage::Group(GroupSendMessage::PeerJoinResult(
                     peer_addr,
                     true,
                     false,
@@ -110,7 +110,7 @@ impl<P: Peer> CAPermissionedGroup<P> {
         let join_data = bincode::deserialize::<(String, P::PublicKey, P::Signature)>(&join_bytes);
         if join_data.is_err() {
             return return_sender
-                .send(Message::Group(GroupMessage::PeerJoinResult(
+                .send(SendMessage::Group(GroupSendMessage::PeerJoinResult(
                     peer_addr,
                     false,
                     true,
@@ -123,7 +123,7 @@ impl<P: Peer> CAPermissionedGroup<P> {
 
         if P::verify(&self.ca, &pk_bytes, &sign) {
             return_sender
-                .send(Message::Group(GroupMessage::PeerJoinResult(
+                .send(SendMessage::Group(GroupSendMessage::PeerJoinResult(
                     peer_addr,
                     true,
                     false,
@@ -141,7 +141,7 @@ impl<P: Peer> CAPermissionedGroup<P> {
             self.peers_name.insert(name, peer_addr);
         } else {
             return_sender
-                .send(Message::Group(GroupMessage::PeerJoinResult(
+                .send(SendMessage::Group(GroupSendMessage::PeerJoinResult(
                     peer_addr,
                     false,
                     true,

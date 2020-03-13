@@ -40,12 +40,12 @@ impl PermissionlessGroup {
         peer_addr: PeerAddr,
         addr: SocketAddr,
         _join_bytes: Vec<u8>,
-        return_sender: Sender<Message>,
+        return_sender: Sender<SendMessage>,
     ) {
         let is_ok = !self.peers.contains_key(&peer_addr);
 
         return_sender
-            .send(Message::Group(GroupMessage::PeerJoinResult(
+            .send(SendMessage::Group(GroupSendMessage::PeerJoinResult(
                 peer_addr,
                 is_ok,
                 false,
