@@ -15,5 +15,4 @@ license = "MIT/Apache-2.0"
 serde = "1"
 bincode = "1"
 async-trait = "0.1"
-
-tdn = { path = "../TDN" } # Dev
+tdn = { git = "https://github.com/cypherlink/TDN.git" } # Dev
