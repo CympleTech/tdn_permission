@@ -1,9 +1,9 @@
+use async_channel::Sender;
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use tdn::async_std::sync::Sender;
-use tdn::prelude::*;
-use tdn::traits::group::Group;
-use tdn::traits::peer::Peer;
+use tdn_types::group::{Group, GroupId, Peer};
+use tdn_types::message::{GroupSendMessage, SendMessage};
+use tdn_types::primitive::PeerAddr;
 
 #[derive(Default, Debug)]
 pub struct CAPermissionedGroup<P: Peer> {
@@ -19,6 +19,10 @@ pub struct CAPermissionedGroup<P: Peer> {
 impl<P: Peer> Group for CAPermissionedGroup<P> {
     type JoinType = (P::PublicKey, P::Signature);
     type JoinResultType = ();
+
+    fn id(&self) -> &GroupId {
+        &self.id
+    }
 }
 
 impl<P: Peer> CAPermissionedGroup<P> {
@@ -52,10 +56,6 @@ impl<P: Peer> CAPermissionedGroup<P> {
         }
     }
 
-    pub fn id(&self) -> &GroupId {
-        &self.id
-    }
-
     pub fn peers(&self) -> Vec<&PeerAddr> {
         self.peers.keys().collect()
     }
@@ -76,14 +76,14 @@ impl<P: Peer> CAPermissionedGroup<P> {
     }
 
     pub fn join_bytes(&self) -> Vec<u8> {
-        bincode::serialize(&(&self.name, &self.my_pk, &self.my_prove)).unwrap_or(vec![])
+        postcard::to_allocvec(&(&self.name, &self.my_pk, &self.my_prove)).unwrap_or(vec![])
     }
 
     pub fn sign_prove(
         sk: &P::SecretKey,
         pk: &P::PublicKey,
     ) -> Result<P::Signature, Box<dyn std::error::Error>> {
-        let pk_bytes = bincode::serialize(pk).unwrap_or(vec![]);
+        let pk_bytes = postcard::to_allocvec(pk).unwrap_or(vec![]);
         P::sign(sk, &pk_bytes)
     }
 
@@ -104,10 +104,11 @@ impl<P: Peer> CAPermissionedGroup<P> {
                     false,
                     self.join_bytes(),
                 )))
-                .await;
+                .await
+                .expect("CAPermissionedGroup to TDN channel closed");
         }
 
-        let join_data = bincode::deserialize::<(String, P::PublicKey, P::Signature)>(&join_bytes);
+        let join_data = postcard::from_bytes::<(String, P::PublicKey, P::Signature)>(&join_bytes);
         if join_data.is_err() {
             return return_sender
                 .send(SendMessage::Group(GroupSendMessage::PeerJoinResult(
@@ -116,10 +117,11 @@ impl<P: Peer> CAPermissionedGroup<P> {
                     true,
                     vec![2],
                 )))
-                .await;
+                .await
+                .expect("CAPermissionedGroup to TDN channel closed");
         }
         let (name, pk, sign) = join_data.unwrap();
-        let pk_bytes = bincode::serialize(&pk).unwrap_or(vec![]);
+        let pk_bytes = postcard::to_allocvec(&pk).unwrap_or(vec![]);
 
         if P::verify(&self.ca, &pk_bytes, &sign) {
             return_sender
@@ -129,7 +131,8 @@ impl<P: Peer> CAPermissionedGroup<P> {
                     false,
                     self.join_bytes(),
                 )))
-                .await;
+                .await
+                .expect("CAPermissionedGroup to TDN channel closed");
 
             let name = if self.peers_name.contains_key(&name) {
                 P::hex_public_key(&pk)
@@ -147,7 +150,8 @@ impl<P: Peer> CAPermissionedGroup<P> {
                     true,
                     vec![3],
                 )))
-                .await;
+                .await
+                .expect("CAPermissionedGroup to TDN channel closed");
         }
     }
 

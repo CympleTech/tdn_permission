@@ -3,25 +3,24 @@
 
 ## Use is simple
 ```rust
-use tdn::async_std::task;
-use tdn::{new_channel, start, Message};
+use tdn::prelude::start;
 use tdn_permission::PermissionlessGroup;
+use tdn_types::message::{GroupReceiveMessage, ReceiveMessage};
 
 fn main() {
-    task::block_on(async {
-        let (out_send, out_recv) = new_channel();
-        let mut group = PermissionlessGroup::default(); // public
-        let send = start(*group.id(), out_send).await.unwrap();
+    smol::block_on(async {
+        let mut group = PermissionlessGroup::default();
+        let (_peer_addr, send, recv) = start().await.unwrap();
 
-        while let Some(message) = out_recv.recv().await {
+        while let Ok(message) = recv.recv().await {
             match message {
-                Message::PeerJoin(peer, addr, data) => {
+                ReceiveMessage::Group(GroupReceiveMessage::PeerJoin(peer, addr, data)) => {
                     group.join(peer, addr, data, send.clone()).await;
                 }
-                Message::PeerJoinResult(peer, is_ok, result) => {
+                ReceiveMessage::Group(GroupReceiveMessage::PeerJoinResult(peer, is_ok, result)) => {
                     group.join_result(peer, is_ok, result);
                 }
-                Message::PeerLeave(peer) => {
+                ReceiveMessage::Group(GroupReceiveMessage::PeerLeave(peer)) => {
                     group.leave(&peer);
                 }
                 _ => {

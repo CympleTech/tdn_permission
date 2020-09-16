@@ -1,8 +1,7 @@
-use tdn::async_std::task;
 use tdn::prelude::*;
-use tdn::traits::peer::Peer;
-use tdn::{new_channel, start_with_config};
 use tdn_permission::CAPermissionedGroup;
+use tdn_types::group::Peer;
+use tdn_types::message::{GroupReceiveMessage, ReceiveMessage};
 
 struct MockPeer;
 
@@ -21,30 +20,31 @@ impl Peer for MockPeer {
     fn verify(_pk: &Self::PublicKey, _msg: &Vec<u8>, sign: &Self::Signature) -> bool {
         sign == &vec![1, 2, 3]
     }
+
+    fn hex_public_key(_pk: &Self::PublicKey) -> String {
+        "NOTHING".to_owned()
+    }
 }
 
 fn main() {
-    task::block_on(async {
-        let (out_send, out_recv) = new_channel();
+    smol::block_on(async {
         let mut group =
             CAPermissionedGroup::<MockPeer>::new(GroupId::default(), vec![1], vec![2], vec![3]);
 
-        let mut config = Config::load();
+        let mut config = Config::load().await;
         config.p2p_join_data = group.join_bytes();
 
-        let send = start_with_config(*group.id(), out_send, config)
-            .await
-            .unwrap();
+        let (_peer_id, send, recv) = start_with_config(config).await.unwrap();
 
-        while let Some(message) = out_recv.recv().await {
+        while let Ok(message) = recv.recv().await {
             match message {
-                Message::PeerJoin(peer, addr, data) => {
+                ReceiveMessage::Group(GroupReceiveMessage::PeerJoin(peer, addr, data)) => {
                     group.join(peer, addr, data, send.clone()).await;
                 }
-                Message::PeerJoinResult(peer, is_ok, result) => {
+                ReceiveMessage::Group(GroupReceiveMessage::PeerJoinResult(peer, is_ok, result)) => {
                     group.join_result(peer, is_ok, result);
                 }
-                Message::PeerLeave(peer) => {
+                ReceiveMessage::Group(GroupReceiveMessage::PeerLeave(peer)) => {
                     group.leave(&peer);
                 }
                 _ => {

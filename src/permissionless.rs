@@ -1,8 +1,9 @@
+use async_channel::Sender;
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use tdn::async_std::sync::Sender;
-use tdn::prelude::*;
-use tdn::traits::group::Group;
+use tdn_types::group::{Group, GroupId};
+use tdn_types::message::{GroupSendMessage, SendMessage};
+use tdn_types::primitive::PeerAddr;
 
 #[derive(Default, Debug)]
 pub struct PermissionlessGroup {
@@ -13,14 +14,14 @@ pub struct PermissionlessGroup {
 impl Group for PermissionlessGroup {
     type JoinType = ();
     type JoinResultType = ();
+
+    fn id(&self) -> &GroupId {
+        &self.id
+    }
 }
 
 impl PermissionlessGroup {
     pub fn new() {}
-
-    pub fn id(&self) -> &GroupId {
-        &self.id
-    }
 
     /// directly add a peer to group.
     pub fn add(&mut self, peer_id: PeerAddr, addr: SocketAddr) {
@@ -51,7 +52,8 @@ impl PermissionlessGroup {
                 false,
                 vec![],
             )))
-            .await;
+            .await
+            .expect("Permissionless group to TDN channel closed");
 
         if is_ok {
             self.peers.insert(peer_addr, addr);

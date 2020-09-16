@@ -1,6 +1,6 @@
 [package]
 name = "tdn_permission"
-version = "0.0.1"
+version = "0.2.0"
 authors = ["Contact <contact@cypherlink.io>"]
 edition = "2018"
 readme = "README.md"
@@ -9,10 +9,12 @@ repository = "https://github.com/cypherlink/TDN-Permission"
 keywords = ["tdn", "permissioned", "permissionless", "distributed", "blockchain"]
 license = "MIT/Apache-2.0"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 serde = "1"
-bincode = "1"
-async-trait = "0.1"
-tdn = "0.1"
+postcard = { version = "0.5", default-features = false, features = ["alloc"] }
+tdn_types = "0.2"
+async-channel = "1.4"
+
+[dev-dependencies]
+tdn = "0.2"
+smol = "1"
