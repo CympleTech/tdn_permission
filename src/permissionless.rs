@@ -1,73 +1,58 @@
-use async_channel::Sender;
-use std::collections::HashMap;
-use std::net::SocketAddr;
+/// It is usecase demo for permissionless. USE IT AS A DEMO.
+
 use tdn_types::group::{Group, GroupId};
-use tdn_types::message::{GroupSendMessage, SendMessage};
-use tdn_types::primitive::PeerAddr;
+use tdn_types::message::{GroupSendMessage, GroupReceiveMessage};
+use tdn_types::primitive::{PeerAddr, HandleResult};
+use std::io::Result;
 
 #[derive(Default, Debug)]
 pub struct PermissionlessGroup {
-    id: GroupId,
-    peers: HashMap<PeerAddr, SocketAddr>,
-}
-
-impl Group for PermissionlessGroup {
-    type JoinType = ();
-    type JoinResultType = ();
-
-    fn id(&self) -> &GroupId {
-        &self.id
-    }
+    id: GroupId
 }
 
 impl PermissionlessGroup {
-    pub fn new() {}
+    pub fn new(id: GroupId) -> Self {
+        Self { id }
+    }
+}
 
-    /// directly add a peer to group.
-    pub fn add(&mut self, peer_id: PeerAddr, addr: SocketAddr) {
-        self.peers
-            .entry(peer_id)
-            .and_modify(|a| *a = addr)
-            .or_insert(addr);
+impl Group for PermissionlessGroup {
+    fn id(&self) -> &GroupId {
+        &self.id
     }
 
-    pub fn join_bytes(&self) -> Vec<u8> {
-        vec![]
+    /// open for all peer connect.
+    fn guard(&self, _addr: &PeerAddr) -> bool {
+        true
     }
 
-    /// join: when peer join will call
-    pub async fn join(
-        &mut self,
-        peer_addr: PeerAddr,
-        addr: SocketAddr,
-        _join_bytes: Vec<u8>,
-        return_sender: Sender<SendMessage>,
-    ) {
-        let is_ok = !self.peers.contains_key(&peer_addr);
+    fn handle(&mut self, msg: GroupReceiveMessage) -> Result<HandleResult> {
+        let mut result = HandleResult::new();
 
-        return_sender
-            .send(SendMessage::Group(GroupSendMessage::PeerJoinResult(
-                peer_addr,
-                is_ok,
-                false,
-                vec![],
-            )))
-            .await
-            .expect("Permissionless group to TDN channel closed");
-
-        if is_ok {
-            self.peers.insert(peer_addr, addr);
+        match  msg {
+            GroupReceiveMessage::PeerJoin(addr, ..) => {
+                result.groups.push(GroupSendMessage::PeerJoinResult(
+                    addr,
+                    false, // cannot connect with stable.
+                    false, // but it can join the DHT table.
+                    vec![],
+                ));
+            }
+            GroupReceiveMessage::PeerLeave(..) => {
+                // nothing todo.
+            }
+            GroupReceiveMessage::PeerJoinResult(..) => {
+                // nothing todo.
+            }
+            GroupReceiveMessage::Event(..) => {
+                // TODO yourself
+            }
+            GroupReceiveMessage::Stream(..) => {
+                // TODO yourself
+            }
         }
-    }
 
-    pub fn join_result(&mut self, peer_addr: PeerAddr, is_ok: bool, _join_result: Vec<u8>) {
-        if !is_ok {
-            self.peers.remove(&peer_addr);
-        }
-    }
+        Ok(result)
 
-    /// leave: when peer leave will call
-    pub fn leave(&mut self, peer_addr: &PeerAddr) {
-        self.peers.remove(&peer_addr);
     }
 }
