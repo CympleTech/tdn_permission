@@ -1,10 +1,10 @@
 use async_channel::Sender;
 use std::collections::HashMap;
+use std::io::Result;
 use std::net::SocketAddr;
 use tdn_types::group::{GroupId, Peer};
 use tdn_types::message::{GroupSendMessage, SendMessage};
 use tdn_types::primitive::PeerAddr;
-use std::io::Result;
 
 #[derive(Default, Debug)]
 pub struct CAPermissionedGroup<P: Peer> {
@@ -51,10 +51,7 @@ impl<P: Peer> CAPermissionedGroup<P> {
         postcard::to_allocvec(&(&self.my_pk, &self.my_prove)).unwrap_or(vec![])
     }
 
-    pub fn sign_prove(
-        sk: &P::SecretKey,
-        pk: &P::PublicKey,
-    ) -> Result<P::Signature> {
+    pub fn sign_prove(sk: &P::SecretKey, pk: &P::PublicKey) -> Result<P::Signature> {
         let pk_bytes = postcard::to_allocvec(pk).unwrap_or(vec![]);
         P::sign(sk, &pk_bytes)
     }
@@ -70,7 +67,7 @@ impl<P: Peer> CAPermissionedGroup<P> {
         let is_ok = self.peers.contains_key(&peer_addr);
         if is_ok {
             return_sender
-                .send(SendMessage::Group(GroupSendMessage::PeerJoinResult(
+                .send(SendMessage::Group(GroupSendMessage::StableResult(
                     peer_addr,
                     true,
                     false,
@@ -83,7 +80,7 @@ impl<P: Peer> CAPermissionedGroup<P> {
         let join_data = postcard::from_bytes::<(P::PublicKey, P::Signature)>(&join_bytes);
         if join_data.is_err() {
             return return_sender
-                .send(SendMessage::Group(GroupSendMessage::PeerJoinResult(
+                .send(SendMessage::Group(GroupSendMessage::StableResult(
                     peer_addr,
                     false,
                     true,
@@ -97,7 +94,7 @@ impl<P: Peer> CAPermissionedGroup<P> {
 
         if P::verify(&self.ca, &pk_bytes, &sign) {
             return_sender
-                .send(SendMessage::Group(GroupSendMessage::PeerJoinResult(
+                .send(SendMessage::Group(GroupSendMessage::StableResult(
                     peer_addr,
                     true,
                     false,
@@ -110,7 +107,7 @@ impl<P: Peer> CAPermissionedGroup<P> {
             self.peers_name.insert(pk, peer_addr);
         } else {
             return_sender
-                .send(SendMessage::Group(GroupSendMessage::PeerJoinResult(
+                .send(SendMessage::Group(GroupSendMessage::StableResult(
                     peer_addr,
                     false,
                     true,

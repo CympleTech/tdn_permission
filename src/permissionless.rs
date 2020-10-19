@@ -1,13 +1,12 @@
-/// It is usecase demo for permissionless. USE IT AS A DEMO.
-
-use tdn_types::group::{Group, GroupId};
-use tdn_types::message::{GroupSendMessage, GroupReceiveMessage};
-use tdn_types::primitive::{PeerAddr, HandleResult};
 use std::io::Result;
+/// It is usecase demo for permissionless. USE IT AS A DEMO.
+use tdn_types::group::{Group, GroupId};
+use tdn_types::message::{GroupReceiveMessage, GroupSendMessage};
+use tdn_types::primitive::{HandleResult, PeerAddr};
 
 #[derive(Default, Debug)]
 pub struct PermissionlessGroup {
-    id: GroupId
+    id: GroupId,
 }
 
 impl PermissionlessGroup {
@@ -29,19 +28,19 @@ impl Group for PermissionlessGroup {
     fn handle(&mut self, msg: GroupReceiveMessage) -> Result<HandleResult> {
         let mut result = HandleResult::new();
 
-        match  msg {
-            GroupReceiveMessage::PeerJoin(addr, ..) => {
-                result.groups.push(GroupSendMessage::PeerJoinResult(
+        match msg {
+            GroupReceiveMessage::StableConnect(addr, ..) => {
+                result.groups.push(GroupSendMessage::StableResult(
                     addr,
                     false, // cannot connect with stable.
                     false, // but it can join the DHT table.
                     vec![],
                 ));
             }
-            GroupReceiveMessage::PeerLeave(..) => {
+            GroupReceiveMessage::StableLeave(..) => {
                 // nothing todo.
             }
-            GroupReceiveMessage::PeerJoinResult(..) => {
+            GroupReceiveMessage::StableResult(..) => {
                 // nothing todo.
             }
             GroupReceiveMessage::Event(..) => {
@@ -53,6 +52,5 @@ impl Group for PermissionlessGroup {
         }
 
         Ok(result)
-
     }
 }
